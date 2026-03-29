@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parking Management | DriveDock</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .location-card {
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .location-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .location-card.selected {
+            border: 2px solid #0d6efd;
+            background-color: #f8f9fa;
+        }
+
+        .slot-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .slot-available {
+            background-color: #28a745;
+        }
+
+        .slot-reserved {
+            background-color: #ffc107;
+        }
+
+        .slot-occupied {
+            background-color: #dc3545;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+            position: sticky;
+            top: 56px;
+        }
+
+        .main-content {
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="dashboard.html">DriveDock Admin</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="reservations.html">Reservations</a></li>
+                <li class="nav-item"><a class="nav-link" href="users.html">Users</a></li>
+                <li class="nav-item"><a class="nav-link" href="services.html">Services</a></li>
+                <li class="nav-item"><a class="nav-link active" href="parking-management.html">Parking</a></li>
+                <li class="nav-item"><a class="nav-link" href="payment-management.html">Payments</a></li>
+                <li class="nav-item"><a class="nav-link" href="admin-management.html">Admins</a></li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><span class="nav-link" id="adminName"></span></li>
+                <li class="nav-item">
+                    <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar - Locations List -->
+        <div class="col-md-3 sidebar p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Parking Locations</h5>
+                <button class="btn btn-primary btn-sm" onclick="showLocationModal()">
+                    <i class="bi bi-plus-circle"></i> Add
+                </button>
+            </div>
+            <div id="locationsList"></div>
+        </div>
+
+        <!-- Main Content - Slots Management -->
+        <div class="col-md-9 main-content p-4">
+            <div id="locationDetails">
+                <div class="text-center text-muted mt-5">
+                    <i class="bi bi-geo-alt" style="font-size: 48px;"></i>
+                    <h4>Select a parking location from the left</h4>
+                    <p>Click on any location to view and manage its parking slots</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Modal -->
+<div class="modal fade" id="locationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="locationModalTitle">Add Parking Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="locationForm">
+                    <input type="hidden" id="locationId">
+                    <div class="mb-3">
+                        <label for="locationName" class="form-label">Location Name *</label>
+                        <input type="text" class="form-control" id="locationName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="locationAddress" class="form-label">Address</label>
+                        <textarea class="form-control" id="locationAddress" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="latitude" class="form-label">Latitude *</label>
+                            <input type="number" step="any" class="form-control" id="latitude" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="longitude" class="form-label">Longitude *</label>
+                            <input type="number" step="any" class="form-control" id="longitude" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="openingTime" class="form-label">Opening Time</label>
+                            <input type="time" class="form-control" id="openingTime">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="closingTime" class="form-label">Closing Time</label>
+                            <input type="time" class="form-control" id="closingTime">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveLocation()">Save Location</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slot Modal -->
+<div class="modal fade" id="slotModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="slotModalTitle">Add Parking Slot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="slotForm">
+                    <input type="hidden" id="slotId">
+                    <input type="hidden" id="slotLocationId">
+                    <div class="mb-3">
+                        <label for="slotNumber" class="form-label">Slot Number *</label>
+                        <input type="text" class="form-control" id="slotNumber" required
+                               placeholder="e.g., A1, B2, 101">
+                    </div>
+                    <div class="mb-3">
+                        <label for="pricePerHour" class="form-label">Price per Hour (LKR) *</label>
+                        <input type="number" step="0.01" class="form-control" id="pricePerHour" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="slotStatus" class="form-label">Status</label>
+                        <select class="form-select" id="slotStatus">
+                            <option value="AVAILABLE">Available</option>
+                            <option value="RESERVED">Reserved</option>
+                            <option value="OCCUPIED">Occupied</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveSlot()">Save Slot</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Session handling
+    const sessionToken = localStorage.getItem('adminSessionToken');
+    if (!sessionToken) window.location.href = 'admin-login.html';
+
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+        if (args[1]) {
+            args[1].headers = {...args[1].headers, 'X-Session-Token': sessionToken};
+        } else {
+            args[1] = {headers: {'X-Session-Token': sessionToken}};
+        }
+        return originalFetch.apply(this, args);
+    };
+
+    const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+    if (adminInfo.fullName) {
+        document.getElementById('adminName').textContent = `Welcome, ${adminInfo.fullName}`;
+    }
+
+    let currentLocationId = null;
+
+    function logout() {
+        fetch('/DriveDock/api/admin/logout', {method: 'POST'})
+            .finally(() => {
+                localStorage.clear();
+                window.location.href = 'admin-login.html';
+            });
+    }
+
+    // Load locations
+    function loadLocations() {
+        fetch('/DriveDock/api/admin/parking-locations')
+            .then(res => res.json())
+            .then(locations => {
+                const container = document.getElementById('locationsList');
+                if (locations.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info">No parking locations yet. Click "Add" to create one.</div>';
+                    return;
+                }
+
+                let html = '';
+                locations.forEach(loc => {
+                    const isSelected = currentLocationId === loc.id;
+                    html += `
+                        <div class="card location-card ${isSelected ? 'selected' : ''}" onclick="selectLocation(${loc.id})">
+                            <div class="card-body">
+                                <h6 class="card-title">${escapeHtml(loc.name)}</h6>
+                                <p class="card-text small text-muted">${loc.total_slots || 0} slots | ${loc.available_slots || 0} available</p>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="event.stopPropagation(); editLocation(${loc.id})">Edit</button>
+                                    <button class="btn btn-outline-danger" onclick="event.stopPropagation(); deleteLocation(${loc.id})">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error loading locations:', error);
+                document.getElementById('locationsList').innerHTML = '<div class="alert alert-danger">Failed to load locations</div>';
+            });
+    }
+
+    function selectLocation(locationId) {
+        currentLocationId = locationId;
+        loadLocations(); // Refresh to show selected state
+        loadLocationDetails(locationId);
+    }
+
+    function loadLocationDetails(locationId) {
+        fetch(`/DriveDock/api/admin/parking-locations?location_id=${locationId}`)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('locationDetails');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">${escapeHtml(data.name)}</h5>
+                            <div>
+                                <button class="btn btn-light btn-sm me-2" onclick="showSlotModal()">
+                                    <i class="bi bi-plus-circle"></i> Add Slot
+                                </button>
+                                <button class="btn btn-light btn-sm" onclick="editLocation(${data.id})">
+                                    <i class="bi bi-pencil"></i> Edit Location
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <p><strong>Address:</strong> ${escapeHtml(data.address || 'N/A')}</p>
+                                    <p><strong>Coordinates:</strong> ${data.latitude}, ${data.longitude}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Operating Hours:</strong> ${data.opening_time || '00:00'} - ${data.closing_time || '23:59'}</p>
+                                </div>
+                            </div>
+
+                            <h6>Parking Slots</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Slot Number</th>
+                                            <th>Status</th>
+                                            <th>Price/Hour (LKR)</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="slotsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Display slots
+                const slotsBody = document.getElementById('slotsTableBody');
+                if (!data.slots || data.slots.length === 0) {
+                    slotsBody.innerHTML = '<tr><td colspan="4" class="text-center">No slots added yet. Click "Add Slot" to create one.</td></tr>';
+                } else {
+                    let slotsHtml = '';
+                    data.slots.forEach(slot => {
+                        const statusClass = slot.status === 'AVAILABLE' ? 'success' : (slot.status === 'RESERVED' ? 'warning' : 'danger');
+                        slotsHtml += `
+                            <tr>
+                                <td><strong>${escapeHtml(slot.slot_number)}</strong></td>
+                                <td><span class="badge bg-${statusClass}">${slot.status}</span></td>
+                                <td>LKR ${slot.price_per_hour.toFixed(2)}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="editSlot(${slot.id})">Edit</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteSlot(${slot.id})">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    slotsBody.innerHTML = slotsHtml;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading location details:', error);
+                document.getElementById('locationDetails').innerHTML = '<div class="alert alert-danger">Failed to load location details</div>';
+            });
+    }
+
+    // Location CRUD
+    function showLocationModal() {
+        document.getElementById('locationModalTitle').textContent = 'Add Parking Location';
+        document.getElementById('locationForm').reset();
+        document.getElementById('locationId').value = '';
+        new bootstrap.Modal(document.getElementById('locationModal')).show();
+    }
+
+    function editLocation(id) {
+        fetch(`/DriveDock/api/admin/parking-locations?location_id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('locationModalTitle').textContent = 'Edit Parking Location';
+                document.getElementById('locationId').value = data.id;
+                document.getElementById('locationName').value = data.name;
+                document.getElementById('locationAddress').value = data.address || '';
+                document.getElementById('latitude').value = data.latitude;
+                document.getElementById('longitude').value = data.longitude;
+                document.getElementById('openingTime').value = data.opening_time || '';
+                document.getElementById('closingTime').value = data.closing_time || '';
+                new bootstrap.Modal(document.getElementById('locationModal')).show();
+            });
+    }
+
+    function saveLocation() {
+        const formData = new URLSearchParams();
+        formData.append('action', 'location');
+        formData.append('id', document.getElementById('locationId').value);
+        formData.append('name', document.getElementById('locationName').value);
+        formData.append('address', document.getElementById('locationAddress').value);
+        formData.append('latitude', document.getElementById('latitude').value);
+        formData.append('longitude', document.getElementById('longitude').value);
+        formData.append('opening_time', document.getElementById('openingTime').value);
+        formData.append('closing_time', document.getElementById('closingTime').value);
+
+        fetch('/DriveDock/api/admin/parking-locations', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || 'Location saved successfully');
+                bootstrap.Modal.getInstance(document.getElementById('locationModal')).hide();
+                loadLocations();
+                if (currentLocationId) loadLocationDetails(currentLocationId);
+            })
+            .catch(error => {
+                console.error('Error saving location:', error);
+                alert('Failed to save location');
+            });
+    }
+
+    function deleteLocation(id) {
+        if (confirm('Are you sure? This will delete all slots in this location and cannot be undone if there are no reservations.')) {
+            fetch(`/DriveDock/api/admin/parking-locations?type=location&id=${id}`, {method: 'DELETE'})
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message || 'Location deleted successfully');
+                    if (currentLocationId === id) {
+                        currentLocationId = null;
+                        document.getElementById('locationDetails').innerHTML = '<div class="text-center text-muted mt-5"><i class="bi bi-geo-alt" style="font-size: 48px;"></i><h4>Select a parking location from the left</h4></div>';
+                    }
+                    loadLocations();
+                })
+                .catch(error => {
+                    console.error('Error deleting location:', error);
+                    alert('Failed to delete location');
+                });
+        }
+    }
+
+    // Slot CRUD
+    function showSlotModal() {
+        if (!currentLocationId) {
+            alert('Please select a location first');
+            return;
+        }
+        document.getElementById('slotModalTitle').textContent = 'Add Parking Slot';
+        document.getElementById('slotForm').reset();
+        document.getElementById('slotId').value = '';
+        document.getElementById('slotLocationId').value = currentLocationId;
+        new bootstrap.Modal(document.getElementById('slotModal')).show();
+    }
+
+    function editSlot(id) {
+        fetch(`/DriveDock/api/admin/parking-locations?location_id=${currentLocationId}`)
+            .then(res => res.json())
+            .then(data => {
+                const slot = data.slots.find(s => s.id === id);
+                if (slot) {
+                    document.getElementById('slotModalTitle').textContent = 'Edit Parking Slot';
+                    document.getElementById('slotId').value = slot.id;
+                    document.getElementById('slotLocationId').value = currentLocationId;
+                    document.getElementById('slotNumber').value = slot.slot_number;
+                    document.getElementById('pricePerHour').value = slot.price_per_hour;
+                    document.getElementById('slotStatus').value = slot.status;
+                    new bootstrap.Modal(document.getElementById('slotModal')).show();
+                }
+            });
+    }
+
+    function saveSlot() {
+        const formData = new URLSearchParams();
+        formData.append('action', 'slot');
+        formData.append('id', document.getElementById('slotId').value);
+        formData.append('location_id', document.getElementById('slotLocationId').value);
+        formData.append('slot_number', document.getElementById('slotNumber').value);
+        formData.append('price_per_hour', document.getElementById('pricePerHour').value);
+        formData.append('status', document.getElementById('slotStatus').value);
+
+        fetch('/DriveDock/api/admin/parking-locations', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData.toString()
+        })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || 'Slot saved successfully');
+                bootstrap.Modal.getInstance(document.getElementById('slotModal')).hide();
+                if (currentLocationId) loadLocationDetails(currentLocationId);
+            })
+            .catch(error => {
+                console.error('Error saving slot:', error);
+                alert('Failed to save slot');
+            });
+    }
+
+    function deleteSlot(id) {
+        if (confirm('Are you sure you want to delete this slot?')) {
+            fetch(`/DriveDock/api/admin/parking-locations?type=slot&id=${id}`, {method: 'DELETE'})
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message || 'Slot deleted successfully');
+                    if (currentLocationId) loadLocationDetails(currentLocationId);
+                })
+                .catch(error => {
+                    console.error('Error deleting slot:', error);
+                    alert('Failed to delete slot');
+                });
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initial load
+    loadLocations();
+</script>
+</body>
+</html>
