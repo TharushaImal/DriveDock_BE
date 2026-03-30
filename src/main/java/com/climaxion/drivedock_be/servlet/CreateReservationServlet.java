@@ -1,6 +1,7 @@
 package com.climaxion.drivedock_be.servlet;
 
 import com.climaxion.drivedock_be.util.DBConnection;
+import com.climaxion.drivedock_be.util.NotificationService;
 import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -68,6 +69,20 @@ public class CreateReservationServlet extends HttpServlet {
                 result.put("message", "Reservation created");
                 result.put("reservationId", newReservationId);
                 out.print(gson.toJson(result));
+
+                try (PreparedStatement tokenPs = con.prepareStatement("SELECT fcm_token FROM user WHERE id = ?")) {
+                    tokenPs.setInt(1, Integer.parseInt(userId));
+                    ResultSet tokenRs = tokenPs.executeQuery();
+                    if (tokenRs.next() && tokenRs.getString("fcm_token") != null) {
+                        String fcmToken = tokenRs.getString("fcm_token");
+                        // Send in background thread to not block response
+                        new Thread(() -> NotificationService.sendToUser(
+                                fcmToken,
+                                "Reservation Confirmed!",
+                                "Your parking slot has been reserved successfully."
+                        )).start();
+                    }
+                }
             } else {
                 Map<String, Object> result = new HashMap<>();
                 result.put("error", "Failed to create reservation");
