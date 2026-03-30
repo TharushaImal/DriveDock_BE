@@ -1,6 +1,7 @@
 package com.climaxion.drivedock_be.servlet;
 
 import com.climaxion.drivedock_be.util.DBConnection;
+import com.climaxion.drivedock_be.util.NotificationService;
 import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -16,6 +17,7 @@ public class CreatePaymentServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
+        String userId = request.getParameter("user_id");
         String reservationId = request.getParameter("reservation_id");
         String amount = request.getParameter("amount");
         String method = request.getParameter("payment_method");
@@ -45,6 +47,20 @@ public class CreatePaymentServlet extends HttpServlet {
                 ups.executeUpdate();
 
                 out.print(gson.toJson("Payment successful & reservation confirmed"));
+
+                try (PreparedStatement tokenPs = con.prepareStatement("SELECT fcm_token FROM user WHERE id = ?")) {
+                    tokenPs.setInt(1, Integer.parseInt(userId));
+                    ResultSet tokenRs = tokenPs.executeQuery();
+                    if (tokenRs.next() && tokenRs.getString("fcm_token") != null) {
+                        String fcmToken = tokenRs.getString("fcm_token");
+                        // Send in background thread to not block response
+                        new Thread(() -> NotificationService.sendToUser(
+                                fcmToken,
+                                "Payment Successful!",
+                                "Your parking is confirmed. Enjoy your parking!"
+                        )).start();
+                    }
+                }
             } else {
                 out.print(gson.toJson("Payment failed"));
             }
