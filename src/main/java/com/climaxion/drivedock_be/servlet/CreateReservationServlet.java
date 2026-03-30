@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.*;
 import java.sql.*;
+import java.util.*;
 
 @WebServlet("/api/reservations")
 public class CreateReservationServlet extends HttpServlet {
@@ -46,7 +47,7 @@ public class CreateReservationServlet extends HttpServlet {
             }
 
             String sql = "INSERT INTO reservation (user_id, parking_slot_id, start_time, end_time, status) VALUES (?, ?, ?, ?, 'PENDING')";
-            PreparedStatement ps = con.prepareStatement(sql);
+            PreparedStatement ps = con.prepareStatement(sql,Statement.RETURN_GENERATED_KEYS);
 
             ps.setInt(1, Integer.parseInt(userId));
             ps.setInt(2, Integer.parseInt(slotId));
@@ -56,9 +57,21 @@ public class CreateReservationServlet extends HttpServlet {
             int rows = ps.executeUpdate();
 
             if (rows > 0) {
-                out.print(gson.toJson("Reservation created"));
+
+                ResultSet generatedKeys = ps.getGeneratedKeys();
+                int newReservationId = 0;
+                if (generatedKeys.next()) {
+                    newReservationId = generatedKeys.getInt(1);
+                }
+
+                Map<String, Object> result = new HashMap<>();
+                result.put("message", "Reservation created");
+                result.put("reservationId", newReservationId);
+                out.print(gson.toJson(result));
             } else {
-                out.print(gson.toJson("Failed to create reservation"));
+                Map<String, Object> result = new HashMap<>();
+                result.put("error", "Failed to create reservation");
+                out.print(gson.toJson(result));
             }
 
         } catch (Exception e) {
